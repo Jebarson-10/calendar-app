@@ -1,1 +1,15 @@
-{}
+{
+  "builds": [
+    { "src": "api/db.js", "use": "@vercel/node" },
+    { "src": "api/events.js", "use": "@vercel/node" },
+    { "src": "api/availability.js", "use": "@vercel/node" },
+    { "src": "api/requests.js", "use": "@vercel/node" },
+    { "src": "api/book.js", "use": "@vercel/node" },
+    { "src": "public/**", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/book", "dest": "/public/book/index.html" },
+    { "src": "/(.*)", "dest": "/public/$1" }
+  ]
+}
