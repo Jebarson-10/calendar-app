@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar Dashboard</title>
+  <style>
+    :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242836;--border:#2e3348;--text:#e4e6f0;--text2:#8b8fa8;--accent:#6c5ce7;--accent2:#a29bfe;--green:#00b894;--red:#e17055;--orange:#fdcb6e;--blue:#74b9ff;--radius:12px}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .header{display:flex;justify-content:space-between;align-items:center;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--surface)}
+    .header h1{font-size:22px;font-weight:600}.header h1 span{color:var(--accent2)}
+    .header-actions{display:flex;gap:10px;align-items:center}
+    .share-link{background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:.2s}
+    .share-link:hover{border-color:var(--accent);color:var(--text)}
+    .tabs{display:flex;gap:4px;padding:16px 32px 0;background:var(--surface)}
+    .tab{padding:10px 20px;border-radius:8px 8px 0 0;cursor:pointer;font-size:14px;color:var(--text2);background:transparent;border:none;transition:.2s}
+    .tab.active{background:var(--bg);color:var(--text);font-weight:500}.tab:hover{color:var(--text)}
+    .main{display:flex;height:calc(100vh - 120px)}
+    .sidebar{width:320px;border-right:1px solid var(--border);padding:20px;overflow-y:auto;background:var(--surface)}
+    .content{flex:1;overflow-y:auto;padding:24px 32px}
+    .cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .cal-nav button{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:4px 8px;border-radius:6px}
+    .cal-nav button:hover{background:var(--surface2);color:var(--text)}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+    .cal-day-label{font-size:11px;color:var(--text2);padding:6px 0}
+    .cal-day{padding:8px 0;font-size:13px;border-radius:6px;cursor:pointer;transition:.15s;color:var(--text2)}
+    .cal-day:hover{background:var(--surface2)}.cal-day.today{background:var(--accent);color:#fff;font-weight:600}
+    .cal-day.selected{outline:2px solid var(--accent2)}.cal-day.other-month{opacity:.3}
+    .cal-day.has-event{position:relative}.cal-day.has-event::after{content:'';display:block;width:4px;height:4px;background:var(--green);border-radius:50%;margin:2px auto 0}
+    .section-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin:24px 0 12px}
+    .event-item{background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid var(--accent);cursor:pointer;transition:.2s}
+    .event-item:hover{transform:translateX(4px)}.event-item .time{font-size:12px;color:var(--accent2);font-weight:500}
+    .event-item .title{font-size:14px;margin-top:4px}.event-item .meta{font-size:12px;color:var(--text2);margin-top:4px}
+    .request-item{background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid var(--orange)}
+    .request-item.approved{border-left-color:var(--green)}.request-item.declined{border-left-color:var(--red);opacity:.6}
+    .request-item .req-header{display:flex;justify-content:space-between;align-items:center}
+    .request-item .req-name{font-weight:500;font-size:14px}
+    .request-item .req-status{font-size:11px;padding:3px 8px;border-radius:20px;text-transform:uppercase;font-weight:600}
+    .status-pending{background:rgba(253,203,110,.15);color:var(--orange)}
+    .status-approved{background:rgba(0,184,148,.15);color:var(--green)}
+    .status-declined{background:rgba(225,112,85,.15);color:var(--red)}
+    .request-item .req-details{font-size:13px;color:var(--text2);margin-top:6px}
+    .request-item .req-actions{display:flex;gap:8px;margin-top:10px}
+    .btn{padding:7px 16px;border-radius:8px;border:none;font-size:13px;cursor:pointer;font-weight:500;transition:.2s}
+    .btn-approve{background:var(--green);color:#fff}.btn-approve:hover{opacity:.85}
+    .btn-decline{background:var(--red);color:#fff}.btn-decline:hover{opacity:.85}
+    .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{opacity:.85}
+    .btn-sm{padding:5px 12px;font-size:12px}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
+    .modal-overlay.active{display:flex}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
+    .modal h2{font-size:18px;margin-bottom:20px}
+    .form-group{margin-bottom:16px}.form-group label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+    .form-group input,.form-group textarea,.form-group select{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit}
+    .form-group input:focus,.form-group textarea:focus{outline:none;border-color:var(--accent)}
+    .form-row{display:flex;gap:12px}.form-row .form-group{flex:1}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
+    .btn-cancel{background:var(--surface2);color:var(--text2)}.btn-cancel:hover{background:var(--border)}
+    .toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;font-size:14px;z-index:200;transform:translateY(100px);opacity:0;transition:.3s}
+    .toast.show{transform:translateY(0);opacity:1}.toast.success{border-left:3px solid var(--green)}.toast.error{border-left:3px solid var(--red)}
+    .avail-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .avail-row:last-child{border-bottom:none}.avail-day{width:100px;font-size:14px;font-weight:500}
+    .avail-toggle{position:relative;width:44px;height:24px}.avail-toggle input{display:none}
+    .avail-toggle .slider{position:absolute;inset:0;background:var(--border);border-radius:12px;cursor:pointer;transition:.2s}
+    .avail-toggle .slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+    .avail-toggle input:checked+.slider{background:var(--green)}.avail-toggle input:checked+.slider::before{transform:translateX(20px)}
+    .avail-times{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text2)}
+    .avail-times input{width:90px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px}
+    .panel{display:none}.panel.active{display:block}
+    .empty{text-align:center;padding:40px 20px;color:var(--text2)}.empty .icon{font-size:40px;margin-bottom:12px}.empty p{font-size:14px}
+    .link-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--blue);background:rgba(116,185,255,.1);padding:2px 8px;border-radius:4px;margin-top:4px}
+    .link-badge::before{content:'🔗';font-size:10px}
+    @media(max-width:768px){.main{flex-direction:column;height:auto}.sidebar{width:100%;border-right:none;border-bottom:1px solid var(--border)}.header{flex-direction:column;gap:12px;padding:16px}.tabs{padding:12px 16px 0;overflow-x:auto}.content{padding:16px}}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📅 <span>My Calendar</span></h1>
+    <div class="header-actions">
+      <button class="share-link" onclick="copyBookingLink()">📋 Copy Booking Link</button>
+      <button class="btn btn-primary" onclick="openNewEvent()">+ New Event</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="calendar" onclick="switchTab('calendar')">📆 Calendar</button>
+    <button class="tab" data-tab="requests" onclick="switchTab('requests')">📨 Requests <span id="pending-badge"></span></button>
+    <button class="tab" data-tab="availability" onclick="switchTab('availability')">⏰ Availability</button>
+  </div>
+  <div class="main">
+    <div class="sidebar">
+      <div id="mini-cal"></div>
+      <div class="section-title">Today's Events</div>
+      <div id="today-events"></div>
+    </div>
+    <div class="content">
+      <div id="panel-calendar" class="panel active"><div id="calendar-view"></div></div>
+      <div id="panel-requests" class="panel"><div id="requests-list"></div></div>
+      <div id="panel-availability" class="panel">
+        <h2 style="margin-bottom:20px">⏰ Weekly Availability</h2>
+        <p style="color:var(--text2);font-size:14px;margin-bottom:20px">Set the hours you're available for booking each day.</p>
+        <div id="availability-grid"></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="event-modal">
+    <div class="modal">
+      <h2 id="modal-title">New Event</h2>
+      <input type="hidden" id="evt-id">
+      <div class="form-group"><label>Title</label><input type="text" id="evt-title" placeholder="Meeting title"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Date</label><input type="date" id="evt-date"></div>
+        <div class="form-group"><label>Start</label><input type="time" id="evt-start" value="09:00"></div>
+        <div class="form-group"><label>End</label><input type="time" id="evt-end" value="10:00"></div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea id="evt-desc" rows="2" placeholder="Optional description"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Location</label><input type="text" id="evt-location" placeholder="Room / address"></div>
+        <div class="form-group"><label>Meeting Link</label><input type="url" id="evt-link" placeholder="https://meet.google.com/..."></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Color</label>
+          <select id="evt-color"><option value="#4A90D9">Blue</option><option value="#6c5ce7">Purple</option><option value="#00b894">Green</option><option value="#e17055">Red</option><option value="#fdcb6e">Yellow</option><option value="#fd79a8">Pink</option></select>
+        </div>
+        <div class="form-group" style="display:flex;align-items:flex-end"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="evt-blocking"> Block this time</label></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeModal('event-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEvent()">Save Event</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let events=[], requests=[], availability=[];
+    let currentDate=new Date(), selectedDate=new Date();
+    const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    document.addEventListener('DOMContentLoaded',()=>loadData());
+
+    async function loadData(){await Promise.all([loadEvents(),loadRequests(),loadAvailability()]);renderMiniCal();renderTodayEvents();renderCalendarView()}
+
+    async function loadEvents(){const r=await fetch('/api/events');events=await r.json()}
+    async function loadRequests(){const r=await fetch('/api/requests');requests=await r.json();const p=requests.filter(r=>r.status==='pending').length;document.getElementById('pending-badge').textContent=p>0?`(${p})`:''}
+    async function loadAvailability(){const r=await fetch('/api/availability');availability=await r.json()}
+
+    function switchTab(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${tab}`));if(tab==='requests')renderRequests();if(tab==='availability')renderAvailability();if(tab==='calendar')renderCalendarView()}
+
+    function renderMiniCal(){const el=document.getElementById('mini-cal');const year=currentDate.getFullYear(),month=currentDate.getMonth();const first=new Date(year,month,1),last=new Date(year,month+1,0);const startDay=first.getDay();const today=new Date();const eventDates=new Set(events.map(e=>e.start_time.split('T')[0]));let html=`<div class="cal-nav"><button onclick="changeMonth(-1)">‹</button><span style="font-size:15px;font-weight:500">${MONTHS[month]} ${year}</span><button onclick="changeMonth(1)">›</button></div><div class="cal-grid'>`;DAYS.forEach(d=>html+=`<div class="cal-day-label">${d}</div>`);for(let i=0;i<startDay;i++){const d=new Date(year,month,-(startDay-1-i));html+=`<div class="cal-day other-month">${d.getDate()}</div>`}for(let d=1;d<=last.getDate();d++){const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const isToday=d===today.getDate()&&month===today.getMonth()&&year===today.getFullYear();const isSel=d===selectedDate.getDate()&&month===selectedDate.getMonth()&&year===selectedDate.getFullYear();let cls='cal-day';if(isToday)cls+=' today';if(isSel)cls+=' selected';if(eventDates.has(dateStr))cls+=' has-event';html+=`<div class="${cls}" onclick="selectDate(${year},${month},${d})">${d}</div>`}const totalCells=startDay+last.getDate();const remaining=(7-totalCells%7)%7;for(let i=1;i<=remaining;i++)html+=`<div class="cal-day other-month">${i}</div>`;html+='</div>';el.innerHTML=html}
+
+    function changeMonth(delta){currentDate.setMonth(currentDate.getMonth()+delta);renderMiniCal()}
+    function selectDate(y,m,d){selectedDate=new Date(y,m,d);renderMiniCal();renderCalendarView()}
+
+    function renderTodayEvents(){const el=document.getElementById('today-events');const todayStr=new Date().toISOString().split('T')[0];const evts=events.filter(e=>e.start_time.startsWith(todayStr));if(!evts.length){el.innerHTML='<div class="empty"><div class="icon">🎉</div><p>No events today!</p></div>';return}el.innerHTML=evts.map(e=>`<div class="event-item" style="border-left-color:${e.color}" onclick="editEvent(${e.id})"><div class="time">${formatTime(e.start_time)} – ${formatTime(e.end_time)}</div><div class="title">${esc(e.title)}</div>${e.meeting_link?`<div class="link-badge">${esc(e.meeting_link)}</div>`:''}</div>`).join('')}
+
+    function renderCalendarView(){const el=document.getElementById('calendar-view');const dateStr=`${selectedDate.getFullYear()}-${String(selectedDate.getMonth()+1).padStart(2,'0')}-${String(selectedDate.getDate()).padStart(2,'0')}`;const dayEvts=events.filter(e=>e.start_time.startsWith(dateStr));let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><h2 style="font-size:18px">${DAYS[selectedDate.getDay()]}, ${MONTHS[selectedDate.getMonth()]} ${selectedDate.getDate()}, ${selectedDate.getFullYear()}</h2><button class="btn btn-primary btn-sm" onclick="openNewEvent('${dateStr}')">+ Add Event</button></div><div style="position:relative">`;for(let h=6;h<=22;h++){const hourStr=`${String(h).padStart(2,'0')}:00`;const hourEvts=dayEvts.filter(e=>parseInt(e.start_time.split('T')[1].split(':')[0])===h);html+=`<div style="display:flex;min-height:50px;border-bottom:1px solid var(--border)"><div style="width:60px;font-size:12px;color:var(--text2);padding:4px 8px;flex-shrink:0">${hourStr}</div><div style="flex:1;padding:4px 8px">${hourEvts.map(e=>`<div class="event-item" style="border-left-color:${e.color};margin-bottom:4px" onclick="editEvent(${e.id})"><div class="time">${formatTime(e.start_time)} – ${formatTime(e.end_time)}</div><div class="title">${esc(e.title)}</div>${e.location?`<div class="meta">📍 ${esc(e.location)}</div>`:''}${e.meeting_link?`<div class="link-badge">${esc(e.meeting_link)}</div>`:''}${e.is_blocking?'<div class="meta" style="color:var(--red)">🚫 Blocked</div>':''}</div>`).join('')}</div></div>`}html+='</div>';el.innerHTML=html}
+
+    function renderRequests(){const el=document.getElementById('requests-list');if(!requests.length){el.innerHTML='<div class="empty"><div class="icon">📭</div><p>No requests yet.<br>Share your booking link!</p></div>';return}el.innerHTML=requests.map(r=>`<div class="request-item ${r.status}"><div class="req-header"><span class="req-name">${esc(r.requester_name)}</span><span class="req-status status-${r.status}">${r.status}</span></div><div class="req-details"><strong>${esc(r.title)}</strong><br>📅 ${r.requested_date} · 🕐 ${r.requested_start} – ${r.requested_end}<br>✉️ ${esc(r.requester_email)}${r.description?`<br>📝 ${esc(r.description)}`:''}${r.meeting_link?`<br>🔗 <a href="${esc(r.meeting_link)}" target="_blank" style="color:var(--blue)">${esc(r.meeting_link)}</a>`:''}${r.owner_note?`<br>💬 Note: ${esc(r.owner_note)}`:''}</div>${r.status==='pending'?`<div class="req-actions"><button class="btn btn-approve btn-sm" onclick="approveRequest(${r.id})">✅ Approve</button><button class="btn btn-decline btn-sm" onclick="declineRequest(${r.id})">❌ Decline</button></div>`:''}</div>`).join('')}
+
+    function renderAvailability(){const el=document.getElementById('availability-grid');const names=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];el.innerHTML=availability.sort((a,b)=>a.day_of_week-b.day_of_week).map(a=>`<div class="avail-row"><div class="avail-day">${names[a.day_of_week]}</div><label class="avail-toggle"><input type="checkbox" ${a.enabled?'checked':''} onchange="toggleAvail(${a.day_of_week},this.checked)"><span class="slider"></span></label><div class="avail-times"><input type="time" value="${a.start_hour}" onchange="updateAvailTime(${a.day_of_week},'start',this.value)"><span>to</span><input type="time" value="${a.end_hour}" onchange="updateAvailTime(${a.day_of_week},'end',this.value)"></div></div>`).join('')}
+
+    async function toggleAvail(day,enabled){const a=availability.find(x=>x.day_of_week===day);await fetch(`/api/availability?day=${day}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({start_hour:a.start_hour,end_hour:a.end_hour,enabled})});showToast(enabled?'Day enabled':'Day disabled','success')}
+    async function updateAvailTime(day,which,value){const a=availability.find(x=>x.day_of_week===day);const body={start_hour:a.start_hour,end_hour:a.end_hour,enabled:a.enabled};if(which==='start')body.start_hour=value;else body.end_hour=value;await fetch(`/api/availability?day=${day}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});showToast('Availability updated','success')}
+
+    function openNewEvent(dateStr){document.getElementById('modal-title').textContent='New Event';document.getElementById('evt-id').value='';document.getElementById('evt-title').value='';document.getElementById('evt-date').value=dateStr||new Date().toISOString().split('T')[0];document.getElementById('evt-start').value='09:00';document.getElementById('evt-end').value='10:00';document.getElementById('evt-desc').value='';document.getElementById('evt-location').value='';document.getElementById('evt-link').value='';document.getElementById('evt-color').value='#4A90D9';document.getElementById('evt-blocking').checked=false;document.getElementById('event-modal').classList.add('active')}
+
+    function editEvent(id){const e=events.find(x=>x.id===id);if(!e)return;document.getElementById('modal-title').textContent='Edit Event';document.getElementById('evt-id').value=e.id;document.getElementById('evt-title').value=e.title;document.getElementById('evt-date').value=e.start_time.split('T')[0];document.getElementById('evt-start').value=e.start_time.split('T')[1].substring(0,5);document.getElementById('evt-end').value=e.end_time.split('T')[1].substring(0,5);document.getElementById('evt-desc').value=e.description;document.getElementById('evt-location').value=e.location;document.getElementById('evt-link').value=e.meeting_link;document.getElementById('evt-color').value=e.color;document.getElementById('evt-blocking').checked=!!e.is_blocking;document.getElementById('event-modal').classList.add('active')}
+
+    async function saveEvent(){const id=document.getElementById('evt-id').value;const date=document.getElementById('evt-date').value;const data={title:document.getElementById('evt-title').value,description:document.getElementById('evt-desc').value,start_time:`${date}T${document.getElementById('evt-start').value}`,end_time:`${date}T${document.getElementById('evt-end').value}`,location:document.getElementById('evt-location').value,meeting_link:document.getElementById('evt-link').value,color:document.getElementById('evt-color').value,is_blocking:document.getElementById('evt-blocking').checked,status:'confirmed'};if(!data.title)return showToast('Title required','error');if(id){await fetch(`/api/events?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});showToast('Event updated','success')}else{await fetch('/api/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});showToast('Event created','success')}closeModal('event-modal');await loadEvents();renderMiniCal();renderTodayEvents();renderCalendarView()}
+
+    async function approveRequest(id){const note=prompt('Add a note (optional):');await fetch(`/api/requests?action=approve&id=${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_note:note})});showToast('Approved!','success');await loadData();renderRequests()}
+    async function declineRequest(id){const note=prompt('Reason (optional):');await fetch(`/api/requests?action=decline&id=${id}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner_note:note})});showToast('Declined','success');await loadData();renderRequests()}
+
+    function closeModal(id){document.getElementById(id).classList.remove('active')}
+    function formatTime(ts){if(!ts)return'';const t=ts.split('T')[1].substring(0,5);const[h,m]=t.split(':');const hr=parseInt(h);return`${hr>12?hr-12:hr||12}:${m} ${hr>=12?'PM':'AM'}`}
+    function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+    function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.classList.remove('show'),3000)}
+    function copyBookingLink(){navigator.clipboard.writeText(`${window.location.origin}/book`).then(()=>showToast('Booking link copied!','success'))}
+    document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('active')})});
+  </script>
+</body>
+</html>
