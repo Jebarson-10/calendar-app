@@ -1,0 +1,19 @@
+services:
+  - name: calendar-app
+    type: web
+    docker:
+      image: Dockerfile
+    ports:
+      - port: 3000
+        protocol: tcp
+    env:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: DATA_DIR
+        value: /data
+    instance_type: nano
+    scaling:
+      min: 1
+      max: 1
